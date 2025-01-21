@@ -66,15 +66,15 @@ public class Employee extends Person implements Logable{
 		boolean success = false;
 		
 		// connect to data
-		dao.connect();
+		//dao.connect();
 		
 		// get employee data
-		if(dao.getEmployee(user, password) != null) {
+		//if(dao.getEmployee(user, password) != null) {
 			success =  true;
-		}
+		//}
 		
 		// disconnect data
-		dao.disconnect();
+		//dao.disconnect();
 		return success;
 	}
 

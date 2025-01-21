@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<products>
+    <product>
+        <id>1</id>
+        <name>Manzana</name>
+        <publicPrice>2.0</publicPrice>
+        <wholesalerPrice>1.0</wholesalerPrice>
+        <available>true</available>
+        <stock>100</stock>
+    </product>
+    <product>
+        <id>2</id>
+        <name>Fresa</name>
+        <publicPrice>3.0</publicPrice>
+        <wholesalerPrice>1.5</wholesalerPrice>
+        <available>false</available>
+        <stock>50</stock>
+    </product>
+</products>
