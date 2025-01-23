@@ -39,7 +39,7 @@ public class Shop {
     public Shop() {
         inventory = new ArrayList<Product>();
         sales = new ArrayList<Sale>();
-        //dao = new DaoImplJaxb();
+        //dao = new DaoImplFile();
         //dao = new DaoImplXml();
         dao = new DaoImplJaxb();
 
@@ -200,6 +200,8 @@ public class Shop {
 
     public void loadInventory() {
         this.dao.getInventory();
+        System.out.println(this.inventory);
+
     }
     
 
@@ -224,6 +226,7 @@ public class Shop {
         ArrayList<Product> products = dao.getInventory();
         if (products != null && !products.isEmpty()) {
             this.inventory = products;
+            System.out.println(this.inventory);
             System.out.println("Inventario cargado correctamente.");
         } else {
             System.out.println("Error al cargar el inventario.");
