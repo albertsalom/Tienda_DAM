@@ -2,65 +2,94 @@ package dao;
 
 import dao.xml.DomWriter;
 import dao.xml.SaxReader;
-import model.Employee;
 import model.Product;
 
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import org.xml.sax.SAXException;
+
 import java.io.File;
-import java.sql.SQLException;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 
 public class DaoImplXml implements Dao {
 
-    private static final String INPUT_FILE = "files/inputInventory.xml";
-
-    @Override
-    public void connect() throws SQLException {
-        // Conexión no aplicable en XML, no hace nada
-        System.out.println("Conexión no requerida para archivos XML.");
-    }
-
-    @Override
-    public void disconnect() throws SQLException {
-        // Desconexión no aplicable en XML, no hace nada
-        System.out.println("Desconexión no requerida para archivos XML.");
-    }
-
-    @Override
-    public Employee getEmployee(int employeeId, String password) throws SQLException {
-        // No es aplicable en la gestión de inventarios XML
-        throw new UnsupportedOperationException("Operación no soportada para XML.");
-    }
+    private static final String INVENTORY_XML_FILE = "files/inputInventory.xml"; // Ruta del archivo de inventario XML
 
     @Override
     public ArrayList<Product> getInventory() {
-        try {
-            // Usar SaxReader para parsear el archivo XML
-            SaxReader saxReader = new SaxReader();
-            File inputFile = new File(INPUT_FILE);
+        ArrayList<Product> products = null;
 
+        // Usar SAX para leer el documento XML de inventario
+        SAXParserFactory factory = SAXParserFactory.newInstance();
+        try {
+            SAXParser parser = factory.newSAXParser();
+            File inputFile = new File(INVENTORY_XML_FILE);
+
+            // Verificar si el archivo existe
             if (!inputFile.exists()) {
-                System.err.println("Archivo no encontrado: " + INPUT_FILE);
-                return new ArrayList<>(); // Devuelve lista vacía si el archivo no existe
+                System.out.println("ERROR: Archivo 'inputInventory.xml' no encontrado en la ruta especificada.");
+                return null;
             }
 
-            saxReader.parse(inputFile); // Método parse implementado en SaxReader
-            return new ArrayList<>(saxReader.getProductList()); // Convertir a ArrayList
-        } catch (Exception e) {
+            // Usar SaxReader para parsear el XML
+            SaxReader saxReader = new SaxReader();
+            parser.parse(inputFile, saxReader);
+            products = saxReader.getProductList();
+            
+        } catch (ParserConfigurationException | SAXException e) {
+            System.out.println("ERROR creando el parser");
             e.printStackTrace();
-            return new ArrayList<>(); // Devuelve lista vacía en caso de error
+        } catch (IOException e) {
+            System.out.println("ERROR al leer el archivo 'inputInventory.xml'.");
+            e.printStackTrace();
         }
+
+        return products; // Devolver la lista de productos leída
     }
 
     @Override
     public boolean writeInventory(ArrayList<Product> inventory) {
-        try {
-            // Usar DomWriter para generar el archivo XML
-            DomWriter domWriter = new DomWriter();
-            domWriter.writeInventoryFile(inventory);
-            return true; // Retorna true si la escritura fue exitosa
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false; // Retorna false en caso de error
-        }
+
+
+        // Usar DomWriter para escribir el inventario en un nuevo archivo XML
+        DomWriter domWriter = new DomWriter();
+        return domWriter.generateDocument(inventory); // Devuelve true si se genera el documento correctamente
     }
+
+    // Métodos de la interfaz Dao sin implementación
+    @Override
+    public void connect() {
+        
+    }
+
+    @Override
+    public void disconnect() {
+        
+    }
+
+    @Override
+    public model.Employee getEmployee(int employeeId, String password) {
+        return null; 
+    }
+
+	@Override
+	public boolean addProduct(Product product) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean updateProduct(Product product) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean deleteProduct(int productId) {
+		// TODO Auto-generated method stub
+		return false;
+	}
 }

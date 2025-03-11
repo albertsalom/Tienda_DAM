@@ -1,36 +1,68 @@
 package model;
 
+import javax.persistence.*; 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-@XmlRootElement(name = "product")  // Nombre del nodo raíz en el XML para el producto
+@XmlRootElement(name = "product")
+@Entity 
+@Table(name = "inventory")
 public class Product {
 
+    @Id
     private int id;
+
+    @Column(nullable = false) 
     private String name;
+
+    @Transient 
     private Amount publicPrice;
+
+    @Embedded
     private Amount wholesalerPrice;
+
+    @Column(nullable = false) 
     private boolean available;
+
+    @Column(nullable = false)
     private int stock;
+
+    @Transient 
     private static int totalProducts;
 
-    public final static double EXPIRATION_RATE = 0.60;
+    private String badge;
+    private String color;
 
-    // Constructor vacío necesario para JAXB
-    public Product() {}
+    @Transient 
+    public static final double EXPIRATION_RATE = 0.60;
+
+    // Constructores
+    public Product() {
+        this.id = ++totalProducts;
+        this.available = true;
+    }
+
+    public Product(int id, String name, Amount wholesalerPrice, boolean available, int stock) {
+        super();
+        this.id = id;
+        this.name = name;
+        this.wholesalerPrice = wholesalerPrice;
+        this.available = available;
+        this.stock = stock;
+        this.publicPrice = new Amount(wholesalerPrice.getValue() * 2);
+        ++totalProducts;
+    }
 
     public Product(String name, Amount wholesalerPrice, boolean available, int stock) {
-        super();
-        this.id = totalProducts + 1;
+        this();
         this.name = name;
         this.wholesalerPrice = wholesalerPrice;
         this.publicPrice = new Amount(wholesalerPrice.getValue() * 2);
-        this.available = available;
         this.stock = stock;
-        totalProducts++;
     }
 
-    @XmlElement // Indica que este campo debe ser serializado/deserializado
+    // Getters y Setters con anotaciones JPA
+    @XmlElement
     public int getId() {
         return id;
     }
@@ -39,7 +71,7 @@ public class Product {
         this.id = id;
     }
 
-    @XmlElement // Indica que este campo debe ser serializado/deserializado
+    @XmlElement
     public String getName() {
         return name;
     }
@@ -48,7 +80,7 @@ public class Product {
         this.name = name;
     }
 
-    @XmlElement(name = "publicPrice") // Personaliza el nombre del campo en el XML
+    @XmlElement
     public Amount getPublicPrice() {
         return publicPrice;
     }
@@ -57,7 +89,7 @@ public class Product {
         this.publicPrice = publicPrice;
     }
 
-    @XmlElement(name = "wholesalerPrice") // Personaliza el nombre del campo en el XML
+    @XmlElement
     public Amount getWholesalerPrice() {
         return wholesalerPrice;
     }
@@ -66,7 +98,7 @@ public class Product {
         this.wholesalerPrice = wholesalerPrice;
     }
 
-    @XmlElement // Indica que este campo debe ser serializado/deserializado
+    @XmlElement
     public boolean isAvailable() {
         return available;
     }
@@ -75,7 +107,7 @@ public class Product {
         this.available = available;
     }
 
-    @XmlElement // Indica que este campo debe ser serializado/deserializado
+    @XmlElement
     public int getStock() {
         return stock;
     }
@@ -92,8 +124,29 @@ public class Product {
         Product.totalProducts = totalProducts;
     }
 
+    @XmlElement
+    public String getBadge() {
+        return badge;
+    }
+
+    public void setBadge(String badge) {
+        this.badge = badge;
+    }
+
+    @XmlElement
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
+    }
+
     public void expire() {
-        this.publicPrice.setValue(this.getPublicPrice().getValue() * EXPIRATION_RATE);
+        if (this.publicPrice != null) {
+            double newValue = this.publicPrice.getValue() * EXPIRATION_RATE;
+            this.publicPrice.setValue(newValue);
+        }
     }
 
     @Override

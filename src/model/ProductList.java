@@ -4,12 +4,12 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.List;
 
-@XmlRootElement(name = "products")
+@XmlRootElement(name = "inventory") 
 public class ProductList {
 
     private List<Product> products;
 
-    @XmlElement(name = "product")  // Esto indica cómo se llamarán los elementos de la lista en el XML
+    @XmlElement(name = "product") 
     public List<Product> getProducts() {
         return products;
     }

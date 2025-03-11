@@ -5,23 +5,12 @@ import model.Sale;
 import model.Amount;
 import model.Client;
 import model.Employee;
+import dao.DaoImplHibernate;
+import dao.DaoImplJDBC; 
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Scanner;
-
-//import dao.DaoImplFile;
-//import dao.DaoImplXml;
-import dao.DaoImplJaxb;
-
 
 public class Shop {
     private Amount cash = new Amount(100.00);
@@ -29,20 +18,16 @@ public class Shop {
     private int numberProducts;
     private ArrayList<Sale> sales;
     private int numberSales;
-    //private DaoImplFile dao;
-    //private DaoImplXml dao;
-    private DaoImplJaxb dao;
-
+    
+    private DaoImplJDBC dao = new DaoImplJDBC();
 
     final static double TAX_RATE = 1.04;
 
     public Shop() {
+        this.dao = new DaoImplJDBC(); 
         inventory = new ArrayList<Product>();
         sales = new ArrayList<Sale>();
-        //dao = new DaoImplFile();
-        //dao = new DaoImplXml();
-        dao = new DaoImplJaxb();
-
+        loadInventory();  
     }
 
     public Amount getCash() {
@@ -88,7 +73,7 @@ public class Shop {
     public static void main(String[] args) {
         Shop shop = new Shop();
 
-        // load inventory from external data
+        // load inventory from the database (not from file anymore)
         shop.loadInventory();
 
         // init session as employee
@@ -113,8 +98,6 @@ public class Shop {
             System.out.println("8) Ver venta total");
             System.out.println("9) Eliminar producto");
             System.out.println("10) Salir programa");
-            System.out.println("11) Guardar inventario en archivo");
-            System.out.println("12) Exportar inventario");
             System.out.print("Seleccione una opción: ");
             opcion = scanner.nextInt();
 
@@ -159,22 +142,9 @@ public class Shop {
                     System.out.println("Cerrando programa ...");
                     exit = true;
                     break;
-                    
-                case 11: // Nueva opción en el menú para guardar el inventario
-                    if (shop.writeInventory()) { // Llamada al método a través de la instancia "shop"
-                        System.out.println("Inventario guardado correctamente.");
-                    } else {
-                        System.out.println("Error al guardar el inventario.");
-                    }
-                    break;
-                case 12:
-                    shop.saveInventory();
-                    break;
-
             }
-            	
-        } while (!exit);
 
+        } while (!exit);
     }
 
     private void initSession() {
@@ -199,46 +169,20 @@ public class Shop {
     }
 
     public void loadInventory() {
-        this.dao.getInventory();
-        System.out.println(this.inventory);
-
-    }
-    
-
-    public void saveInventory() {
-    	String fileName = "files/inventory_" + LocalDate.now() + ".txt"; // Generar el nombre del archivo
-        File file = new File(fileName);
-
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-            int counter = 1;
-            for (Product product : inventory) { // Recorrer los productos del inventario
-                writer.write(counter + ";Product:" + product.getName() + ";Stock:" + product.getStock() + ";\n");
-                counter++;
-            }
-            writer.write("Numero total de productos:" + inventory.size() + ";"); // Agregar el número total de productos
-            System.out.println("Inventario exportado exitosamente a: " + fileName);
-        } catch (IOException e) {
-            System.err.println("Error al exportar el inventario: " + e.getMessage());
-        }
-    }
-
-    private void readInventory() {
-        ArrayList<Product> products = dao.getInventory();
-        if (products != null && !products.isEmpty()) {
-            this.inventory = products;
-            System.out.println(this.inventory);
-            System.out.println("Inventario cargado correctamente.");
+        // Cargar inventario desde la base de datos
+        this.inventory = dao.getInventory();
+        if (inventory != null && !inventory.isEmpty()) {
+            this.numberProducts = inventory.size();
+            System.out.println("Inventario cargado con éxito.");
         } else {
-            System.out.println("Error al cargar el inventario.");
+            System.out.println("Error al cargar el inventario o inventario vacío.");
         }
     }
 
-    
     public boolean writeInventory() {
+        // Cambiar el método a trabajar con base de datos
         return dao.writeInventory(this.inventory);
     }
-
-
 
     private void showCash() {
         System.out.println("Dinero actual: " + cash);
@@ -257,7 +201,10 @@ public class Shop {
         System.out.print("Stock: ");
         int stock = scanner.nextInt();
 
-        addProduct(new Product(name, new Amount(wholesalerPrice), true, stock));
+        Product newProduct = new Product(name, new Amount(wholesalerPrice), true, stock);
+        dao.addProduct(newProduct); 
+        inventory.add(newProduct);
+        numberProducts++;
     }
 
     public void removeProduct() {
@@ -271,10 +218,13 @@ public class Shop {
         Product product = findProduct(name);
 
         if (product != null) {
-            if (inventory.remove(product)) {
+            // Eliminar el producto usando DaoImplJDBC
+            if (dao.deleteProduct(product.getId())) {
+                inventory.remove(product);
+                numberProducts--;
                 System.out.println("El producto " + name + " ha sido eliminado");
             } else {
-                System.out.println("No se ha encontrado el producto con nombre " + name);
+                System.out.println("No se ha podido eliminar el producto.");
             }
         } else {
             System.out.println("No se ha encontrado el producto con nombre " + name);
@@ -291,8 +241,8 @@ public class Shop {
             System.out.print("Seleccione la cantidad a añadir: ");
             int stock = scanner.nextInt();
             product.setStock(product.getStock() + stock);
+            dao.updateProduct(product);  // Actualizar el producto en la base de datos
             System.out.println("El stock del producto " + name + " ha sido actualizado a " + product.getStock());
-
         } else {
             System.out.println("No se ha encontrado el producto con nombre " + name);
         }
@@ -302,11 +252,11 @@ public class Shop {
         Scanner scanner = new Scanner(System.in);
         System.out.print("Seleccione un nombre de producto: ");
         String name = scanner.next();
-
         Product product = findProduct(name);
 
         if (product != null) {
             product.expire();
+            dao.updateProduct(product);  // Actualizar el producto en la base de datos
             System.out.println("El precio del producto " + name + " ha sido actualizado a " + product.getPublicPrice());
         }
     }
@@ -326,11 +276,10 @@ public class Shop {
         String nameClient = sc.nextLine();
         Client client = new Client(nameClient);
 
-        ArrayList<Product> shoppingCart = new ArrayList<Product>();
-        int numberShopping = 0;
-
+        ArrayList<Product> shoppingCart = new ArrayList<>();
         Amount totalAmount = new Amount(0.0);
         String name = "";
+
         while (!name.equals("0")) {
             System.out.println("Introduce el nombre del producto, escribir 0 para terminar:");
             name = sc.nextLine();
@@ -338,23 +287,21 @@ public class Shop {
             if (name.equals("0")) {
                 break;
             }
-            Product product = findProduct(name);
-            boolean productAvailable = false;
 
-            if (product != null && product.isAvailable()) {
-                productAvailable = true;
+            Product product = findProduct(name);
+            if (product != null && product.isAvailable() && product.getStock() > 0) {
                 totalAmount.setValue(totalAmount.getValue() + product.getPublicPrice().getValue());
                 product.setStock(product.getStock() - 1);
+                dao.updateProduct(product);
                 shoppingCart.add(product);
-                numberShopping++;
+
                 if (product.getStock() == 0) {
                     product.setAvailable(false);
+                    dao.updateProduct(product);
                 }
-                System.out.println("Producto añadido con éxito");
-            }
-
-            if (!productAvailable) {
-                System.out.println("Producto no encontrado o sin stock");
+                System.out.println("Producto añadido con éxito.");
+            } else {
+                System.out.println("Producto no encontrado o sin stock.");
             }
         }
 
@@ -366,76 +313,41 @@ public class Shop {
         }
 
         Sale sale = new Sale(client, shoppingCart, totalAmount);
+        dao.addSale(sale);
         sales.add(sale);
-        cash.setValue(cash.getValue() + totalAmount.getValue());
         numberSales++;
     }
 
-    public void showSales() {
-        System.out.println("Lista de ventas:");
-        for (Sale sale : sales) {
-            if (sale != null) {
-                System.out.println(sale);
-            }
-        }
 
-        Scanner sc = new Scanner(System.in);
-        System.out.println("Exportar fichero ventas? S / N");
-        String option = sc.nextLine();
-        if ("S".equalsIgnoreCase(option)) {
-            this.writeSales();
+    private void showSales() {
+        for (Sale sale : sales) {
+            System.out.println(sale);
         }
     }
 
     private void showSalesAmount() {
-        double totalSales = 0.0;
-
+        double totalAmount = 0;
         for (Sale sale : sales) {
-            totalSales += sale.getAmount().getValue();
+            totalAmount += sale.getAmount().getValue();
         }
-        System.out.println("Venta total: " + totalSales);
-    }
-
-    private boolean isInventoryFull() {
-        return inventory.size() >= 10;
+        System.out.println("Total de ventas: " + totalAmount);
     }
 
     public Product findProduct(String name) {
-        for (Product product : this.inventory) {
-            if (product.getName().equals(name)) {
+        for (Product product : inventory) {
+            if (product != null && product.getName().equalsIgnoreCase(name)) {
                 return product;
             }
         }
         return null;
     }
 
-
-    private void writeSales() {
-        File file = new File("sales.txt");
-
-        try (FileWriter writer = new FileWriter(file);
-                BufferedWriter buffer = new BufferedWriter(writer)) {
-
-            for (Sale sale : sales) {
-                buffer.write(sale.toString());
-                buffer.newLine();
-            }
-            System.out.println("Fichero sales.txt generado");
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    private boolean isInventoryFull() {
+        return inventory.size() >= 100;
     }
-
+    
     public void addProduct(Product product) {
-        if (inventory.size() < 10) {
-            inventory.add(product);
-            System.out.println("Producto añadido");
-        } else {
-            System.out.println("Inventario completo, no se pueden añadir más productos");
-        }
+        inventory.add(product);
     }
 
-    
-    
 }

@@ -1,27 +1,33 @@
 package model;
 
-import java.text.DecimalFormat;
-import javax.xml.bind.annotation.XmlAttribute;
+import javax.persistence.Embeddable;
+import javax.persistence.Transient;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlValue;
+import java.io.Serializable;
+import java.text.DecimalFormat;
 
-@XmlRootElement(name = "amount")  // Define el nombre del nodo raíz para Amount
-public class Amount {
+@XmlRootElement(name = "amount")
+@Embeddable
+public class Amount implements Serializable {
 
+    private static final long serialVersionUID = 1L;
+    
+    @Transient 
     private double value;
+
+    @Transient 
     private String currency = "€";
 
     private static final DecimalFormat df = new DecimalFormat("0.00");
 
-    // Constructor necesario para JAXB
     public Amount() {}
 
     public Amount(double value) {
-        super();
         this.value = value;
     }
 
-    @XmlValue  // Esta anotación indica que este es el valor del nodo (el número)
+    @XmlElement
     public double getValue() {
         return value;
     }
@@ -30,7 +36,7 @@ public class Amount {
         this.value = value;
     }
 
-    @XmlAttribute(name = "currency")  // Mapea el atributo "currency" en el XML
+    @XmlElement
     public String getCurrency() {
         return currency;
     }
@@ -44,4 +50,3 @@ public class Amount {
         return df.format(value) + currency;
     }
 }
-
