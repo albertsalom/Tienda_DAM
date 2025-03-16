@@ -8,16 +8,17 @@ import model.Product;
 import model.Amount;
 import utils.Constants;
 import dao.DaoImplHibernate;
-import dao.DaoImplJDBC;  
+import dao.DaoImplJDBC;
+import dao.DaoImplMongoDB;
 import main.Shop;
 
 public class ShopView extends JFrame {
-    private DaoImplHibernate dao; 
+    private DaoImplMongoDB dao; 
     private Shop shop;  // Instancia de Shop para acceder a la caja
 
     // Constructor
     public ShopView() {
-        this.dao = new DaoImplHibernate();  // Inicializa DaoImplHibernate
+        this.dao = new DaoImplMongoDB();  // Inicializa DaoImplMongoDB
         this.shop = new Shop();  // Inicializa la tienda
 
         // Configuración de la ventana

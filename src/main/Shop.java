@@ -7,6 +7,7 @@ import model.Client;
 import model.Employee;
 import dao.DaoImplHibernate;
 import dao.DaoImplJDBC; 
+import dao.DaoImplMongoDB;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -19,12 +20,12 @@ public class Shop {
     private ArrayList<Sale> sales;
     private int numberSales;
     
-    private DaoImplJDBC dao = new DaoImplJDBC();
+    private DaoImplMongoDB dao = new DaoImplMongoDB();
 
     final static double TAX_RATE = 1.04;
 
     public Shop() {
-        this.dao = new DaoImplJDBC(); 
+        this.dao = new DaoImplMongoDB(); 
         inventory = new ArrayList<Product>();
         sales = new ArrayList<Sale>();
         loadInventory();  
