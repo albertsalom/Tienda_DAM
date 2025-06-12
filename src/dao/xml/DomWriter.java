@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Locale;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -46,11 +47,20 @@ public class DomWriter {
                 Element productElement = document.createElement("product");
                 productElement.setAttribute("name", product.getName());
                 root.appendChild(productElement);
+                
+                Element availableElement = document.createElement("available");
+                availableElement.setTextContent(Boolean.toString(product.isAvailable()));
+                productElement.appendChild(availableElement);
 
                 Element priceElement = document.createElement("wholesalerPrice");
                 priceElement.setAttribute("currency", "€");
-                priceElement.setTextContent(String.format("%.2f", product.getWholesalerPrice().getValue()));
+                priceElement.setTextContent(String.format(Locale.US, "%.1f", product.getWholesalerPrice().getValue()));
                 productElement.appendChild(priceElement);
+                
+                Element publicElement = document.createElement("publicPrice");
+                publicElement.setAttribute("currency", "€");
+                publicElement.setTextContent(String.format(Locale.US, "%.1f", product.getWholesalerPrice().getValue()));
+                productElement.appendChild(publicElement);
                 
                 Element stockElement = document.createElement("stock");
                 stockElement.setTextContent(Integer.toString(product.getStock()));
