@@ -1,235 +1,215 @@
 package dao;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Date;
+
+import org.bson.Document;
+import org.bson.types.ObjectId;
 
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
+import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.Updates;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 
-import org.bson.Document;
+import static com.mongodb.client.model.Filters.eq;
+
+import static com.mongodb.client.model.Updates.combine;
+import static com.mongodb.client.model.Updates.set;
+
 
 import model.Amount;
 import model.Employee;
 import model.Product;
-import model.Sale;
 
-public class DaoImplMongoDB {
-    private static final String URI = "mongodb://localhost:27017";
-    private static final String DATABASE_NAME = "shop";
-    private static final String COLLECTION_NAME = "inventory";
-    
-    private MongoClient mongoClient;
-    private MongoDatabase database;
+public class DaoImplMongoDB implements Dao {
 
-    public DaoImplMongoDB() {
-        connect();
-    }
+    MongoCollection<Document> collection;
+    MongoClient mongoClient;
+	MongoDatabase mongoDatabase;
+    ObjectId id;
 
-    private void connect() {
-        try {
-            mongoClient = new MongoClient(new MongoClientURI(URI));
-            database = mongoClient.getDatabase(DATABASE_NAME);
-            System.out.println("Conectado a la base de datos MongoDB: " + DATABASE_NAME);
-        } catch (Exception e) {
-            System.err.println("Error al conectar a MongoDB: " + e.getMessage());
-        }
-    }
+    @Override
+	public void connect() {
+		String uri = "mongodb://localhost:27017";
+		MongoClientURI mongoClientURI = new MongoClientURI(uri);
+		mongoClient = new MongoClient(mongoClientURI);
 
-    public MongoDatabase getDatabase() {
-        return database;
-    }
+		mongoDatabase = mongoClient.getDatabase("JAVA-SHOP-M06");
+	}
 
-    public void close() {
+    @Override
+    public void disconnect() {
         if (mongoClient != null) {
             mongoClient.close();
-            System.out.println("Conexión cerrada.");
+            System.out.println("Conexión cerrada correctamente.");
         }
     }
-    
+
+    @Override
     public Employee getEmployee(int employeeId, String password) {
-        try {
-            MongoCollection<Document> collection = database.getCollection("users");
+    System.out.println("holacaracola");
+    
+    Employee employee = null;
+    
+    collection = mongoDatabase.getCollection("users");
 
-            // Buscar el empleado con el ID y la contraseña en la base de datos
-            Document doc = collection.find(Filters.and(
-                    Filters.eq("employeeId", employeeId),
-                    Filters.eq("password", password)
-            )).first();
-
-            // Si se encuentra el empleado, se devuelve como objeto Employee
-            if (doc != null) {
-                return new Employee(
-                    doc.getInteger("employeeId"),
-                    doc.getString("name"),
-                    doc.getString("password") 
-                );
-            }
-
-        } catch (Exception e) {
-            System.err.println("Error al obtener el empleado: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        return null; 
+    if (collection == null) {
+        System.out.println("No se pudo conectar a la base de datos.");
+    } else {
+        System.out.println("Conexión exitosa.");
     }
 
-    public ArrayList<Product> getInventory() {
-        ArrayList<Product> inventory = new ArrayList<>();
-        MongoCollection<Document> collection = database.getCollection("inventory");
+    Document employeeDoc = collection.find(Filters.eq("employeeId", employeeId)).first();
 
-        try (MongoCursor<Document> cursor = collection.find().iterator()) {
-            System.out.println("Cargando inventario...");
+    if (employeeDoc != null) {
+        String storedPassword = employeeDoc.getString("password");
 
-            while (cursor.hasNext()) {
-                Document doc = cursor.next();
+        // if (storedPassword != null && storedPassword.equals(password)) {
+        //     employee = new Employee(
+        //         employeeDoc.getInteger("employeeId"),
+        //         employeeDoc.getString("name"),
+        //         employeeDoc.getString("password")
+        //     );
+        // }
 
-                // Acceder correctamente al campo wholesalerPrice.value
-                Document priceDoc = (Document) doc.get("wholesalerPrice");
-                double priceValue = priceDoc.getDouble("value");
-
-                Product product = new Product(
-                    doc.getInteger("id"),
-                    doc.getString("name"),
-                    new Amount(priceValue), 
-                    doc.getBoolean("available"),
-                    doc.getInteger("stock")
+        if (storedPassword != null) {
+            if (storedPassword.equals(password)) {
+                employee = new Employee(
+                    employeeDoc.getInteger("employeeId"),
+                    employeeDoc.getString("name"),
+                    storedPassword
                 );
-
-                inventory.add(product);
-
-                // Imprimir información del producto en la consola
-                System.out.println("Producto cargado: ID=" + product.getId() +
-                        ", Nombre=" + product.getName() +
-                        ", Precio Mayorista=" + product.getWholesalerPrice().getValue() +
-                        ", Disponible=" + product.isAvailable() +
-                        ", Stock=" + product.getStock());
+            } else {
+                System.out.println("Contraseña incorrecta");
             }
-
-            if (inventory.isEmpty()) {
-                System.out.println("No hay productos en el inventario.");
-            }
-
-        } catch (Exception e) {
-            System.err.println("Error al obtener el inventario: " + e.getMessage());
-            e.printStackTrace();
+        } else {
+            System.out.println("Empleado no encontrado o contraseña no disponible.");
         }
+}
+    return employee;
+    }
+
+    @Override
+    public ArrayList<Product> getInventory() {
+
+        ArrayList<Product> inventory = new ArrayList<>();
+        
+        collection = mongoDatabase.getCollection("inventory");
+        
+        Iterable<Document> documents = collection.find();
+        
+        for (Document document : documents) {
+             // Extraer unicamente el precio del wholesalerPrice
+
+            Document priceDoc = (Document) document.get("wholesalerPrice");
+            double priceValue = priceDoc != null ? priceDoc.getDouble("value") : 0.0;
+
+            Amount wholesalerPrice = new Amount(priceValue);
+
+            Product product = new Product (
+                document.getString("name"),
+                wholesalerPrice,
+                document.getBoolean("available", false),
+                document.getInteger("stock")
+            );
+
+            inventory.add(product);
+        }
+
+        for (Product product : inventory) {
+            System.out.println(product);
+        };
 
         return inventory;
     }
+
+    @Override
+    public boolean writeInventory(ArrayList<Product> products) {
+        
+        LocalDateTime fechaHora = LocalDateTime.now();
+		DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/mm/yyyy hh:mm:ss");
+        String fechaFormateada = fechaHora.format(formato);
     
-    public boolean writeInventory(ArrayList<Product> inventory) {
+        collection = mongoDatabase.getCollection("historical_inventory");
+
         try {
-            MongoCollection<Document> collection = database.getCollection("historical_inventory");
+            for (Product product: products) {
 
-            // Crear una lista de documentos para la inserción en batch
-            List<Document> documents = new ArrayList<>();
+                System.out.println(product);
+                Document document = new Document ("_id", new ObjectId())
+                .append("name", product.getName())
+                .append("wholesalerPrice", 
+                    new Document("value", product.getWholesalerPrice().getValue())
+                    .append("currency", "€"))
+                .append("available", product.isAvailable()).append("stock", product.getStock())
+                .append("id", product.getId())
+                .append("created_at", fechaFormateada);
 
-            for (Product product : inventory) {
-                Document productDoc = new Document("id_product", product.getId())
-                        .append("name", product.getName())
-                        .append("wholesalerPrice", new Document("value", product.getWholesalerPrice().getValue())
-                                .append("currency", "€")) // Mantener el formato de currency
-                        .append("available", product.isAvailable())
-                        .append("stock", product.getStock())
-                        .append("created_at", new Date()); // Guardar la fecha actual
+                collection.insertOne(document);
 
-                documents.add(productDoc);
             }
 
-            // Insertar todos los productos en batch
-            if (!documents.isEmpty()) {
-                collection.insertMany(documents);
-                System.out.println("Inventario histórico guardado correctamente.");
-                return true;
-            } else {
-                System.out.println("No hay productos para guardar en el inventario histórico.");
-                return false;
-            }
-
+            return true;
         } catch (Exception e) {
-            System.err.println("Error al escribir el inventario histórico: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
+        
     }
 
-    public boolean addProduct(Product product) {
-        try {
-            MongoCollection<Document> collection = database.getCollection("inventory");
+    public void addProduct(Product product){
+        
+        collection = mongoDatabase.getCollection("inventory");
 
-            // Crear el documento con la estructura esperada
-            Document productDoc = new Document("id", product.getId())
-                    .append("name", product.getName())
-                    .append("wholesalerPrice", new Document("value", product.getWholesalerPrice().getValue())
-                            .append("currency", "€"))
-                    .append("available", product.isAvailable())
-                    .append("stock", product.getStock());
+        Boolean stock = true;
 
-            // Insertar el producto en la colección
-            collection.insertOne(productDoc);
-            System.out.println("Producto insertado correctamente: " + product.getName());
-
-            return true; // Retorna true si la inserción fue exitosa
-
-        } catch (Exception e) {
-            System.err.println("Error al insertar el producto: " + e.getMessage());
-            e.printStackTrace();
-            return false; // Retorna false en caso de error
+        if (product.getStock() <= 0) {
+            stock = false;
         }
-    }
 
-    public boolean deleteProduct(int productId) {
-        try {
-            MongoCollection<Document> collection = database.getCollection("inventory");
+        Document document = new Document ("_id", new ObjectId())
+        .append("name", product.getName())
+        .append("wholesalerPrice", new Document("value", product.getWholesalerPrice().getValue()).append("currency", "€"))
+        .append("available", stock).append("stock", product.getStock())
+        .append("id", product.getId());
 
-            // Eliminar el producto con el ID especificado
-            DeleteResult result = collection.deleteOne(Filters.eq("id", productId));
+        collection.insertOne(document);
+	}
+	public void updateProduct(String name, int stock){        
+        collection = mongoDatabase.getCollection("inventory");
 
-            // Si se eliminó al menos un documento, la operación fue exitosa
-            return result.getDeletedCount() > 0;
+        boolean isAvailable = true;
 
-        } catch (Exception e) {
-            System.err.println("Error al eliminar el producto: " + e.getMessage());
-            e.printStackTrace();
-            return false;
+        if (stock <= 0) {
+            isAvailable = false;
         }
-    }
 
-    public boolean updateProduct(Product product) {
+        System.out.println("Entrando en updateProduct...");
         try {
-            MongoCollection<Document> collection = database.getCollection("inventory");
-
-            // Crear la actualización con los nuevos valores
-            UpdateResult result = collection.updateOne(
-                Filters.eq("id", product.getId()),  // Filtrar por el ID del producto
-                Updates.combine(
-                    Updates.set("name", product.getName()),
-                    Updates.set("wholesalerPrice.value", product.getWholesalerPrice().getValue()),
-                    Updates.set("wholesalerPrice.currency", "€"), // Asegurar que la moneda se mantenga
-                    Updates.set("available", product.isAvailable()),
-                    Updates.set("stock", product.getStock())
-                )
-            );
-
-            // Verificar si al menos un documento fue modificado
-            return result.getModifiedCount() > 0;
-
+            UpdateResult result = collection.updateOne(eq("name", name),combine(set("stock", stock), set("available", isAvailable)));
+            System.out.println("se ha modificado el producto");        
         } catch (Exception e) {
-            System.err.println("Error al actualizar el producto: " + e.getMessage());
-            e.printStackTrace();
-            return false;
+            // TODO: handle exception
+            System.out.println("Error al modificar el producto");        
         }
-    }
 
-    public void addSale(Sale sale) {
-        // TODO Auto-generated method stub
-    }
+	}
+	public void deleteProduct(String name){
+
+        collection = mongoDatabase.getCollection("inventory");
+
+        try {
+            DeleteResult result = collection.deleteOne(eq("name", name)); 
+            System.out.println("se ha eliminado el producto correctamente");        
+        } catch (Exception e) {
+            // TODO: handle exception
+            System.out.println("Da error al eliminar el producto");        
+        }
+	}
+
 }

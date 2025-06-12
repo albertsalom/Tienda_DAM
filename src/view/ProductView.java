@@ -164,7 +164,7 @@ public class ProductView extends JDialog implements ActionListener{
 							true,
 							Integer.parseInt(textFieldStock.getText()));
 					shop.addProduct(product);
-					JOptionPane.showMessageDialog(null, "Producto añadido ", "Information",
+					JOptionPane.showMessageDialog(null, "Producto añadido ", "Informat ion",
 							JOptionPane.INFORMATION_MESSAGE);
 					// release current screen
 					dispose();	
@@ -173,15 +173,19 @@ public class ProductView extends JDialog implements ActionListener{
 				break;
 				
 			case Constants.OPTION_ADD_STOCK:
+
+				String productText = textFieldName.getText();
+				int stockInput = Integer.parseInt(textFieldStock.getText());
 				// check product exists
-				product = shop.findProduct(textFieldName.getText());
+				product = shop.findProduct(productText);
 				
 				if (product == null) {
 					JOptionPane.showMessageDialog(null, "Producto no existe ", "Error",
 							JOptionPane.ERROR_MESSAGE);
 					
 				} else {					
-					product.setStock(product.getStock() + Integer.parseInt(textFieldStock.getText()));
+					product.setStock(product.getStock() + stockInput);
+					shop.addStock(productText, stockInput);
 					JOptionPane.showMessageDialog(null, "Stock actualizado ", "Information",
 							JOptionPane.INFORMATION_MESSAGE);
 					// release current screen
@@ -192,7 +196,8 @@ public class ProductView extends JDialog implements ActionListener{
 				
 			case Constants.OPTION_REMOVE_PRODUCT:
 				// check product exists
-				product = shop.findProduct(textFieldName.getText());
+				String productName = textFieldName.getText();
+				product = shop.findProduct(productName);
 				
 				if (product == null) {
 					JOptionPane.showMessageDialog(null, "Producto no existe ", "Error",
@@ -200,6 +205,7 @@ public class ProductView extends JDialog implements ActionListener{
 					
 				} else {					
 					shop.getInventory().remove(product);
+					shop.removeProduct(productName);
 					JOptionPane.showMessageDialog(null, "Producto eliminado", "Information",
 							JOptionPane.INFORMATION_MESSAGE);
 					// release current screen

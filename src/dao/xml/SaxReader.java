@@ -1,88 +1,95 @@
 package dao.xml;
 
-import model.Product;
-import model.Amount;
+import java.util.ArrayList;
+
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-import java.util.ArrayList;
+import model.Amount;
+import model.Product;
 
 public class SaxReader extends DefaultHandler {
+    ArrayList<Product> inventory;
+    Product product;
+    String value;
+    String parsedElement;
 
-    private ArrayList<Product> productList;
-    private Product currentProduct;
-    private StringBuilder currentValue;
-    private String parsedElement;
-
-    public SaxReader() {
-        productList = new ArrayList<>();
-        currentValue = new StringBuilder();
+    // devolver los Productos
+    public ArrayList<Product> getInventory() {
+        return inventory;
     }
 
-    // Se llama al inicio de cada etiqueta
+    // Añadir los productos
+    public void setInventory(ArrayList<Product> inventory) {
+        this.inventory = inventory;
+    }
+
+    @Override
+    public void startDocument() throws SAXException {
+        this.inventory = new ArrayList<>();
+    }
+
     @Override
     public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
-        switch (qName) {
-            case "product":
-                // Creamos un nuevo producto; si 'name' no está como atributo, usamos el nombre por defecto "empty"
-                this.currentProduct = new Product();
-                String nameAttribute = attributes.getValue("name");
-                if (nameAttribute != null) {
-                    this.currentProduct.setName(nameAttribute);
-                }
-                break;
-            case "wholesalerPrice":
-                // Aquí usamos un atributo 'badge' si existe
-                String badgeAttribute = attributes.getValue("badge");
-                if (badgeAttribute != null) {
-                    this.currentProduct.setBadge(badgeAttribute);
-                }
-                break;
-            case "stock":
-                // Establecemos 'color' y 'stock' si están como atributos 
-                String colorAttribute = attributes.getValue("color");
-                if (colorAttribute != null) {
-                    this.currentProduct.setColor(colorAttribute);
-                }
-                String stockAttribute = attributes.getValue("storage"); // Cambiar a stock si es necesario
-                if (stockAttribute != null) {
-                    this.currentProduct.setStock(Integer.parseInt(stockAttribute)); // Usar setStock en lugar de setStorage
-                }
-                break;
-        }
-        // Asignamos el elemento actual y reiniciamos currentValue para acumular el contenido
-        this.parsedElement = qName;
-        currentValue.setLength(0); // Reiniciamos el acumulador de valores de texto
-    }
-
-    // Se llama al final de cada etiqueta
-    @Override
-    public void endElement(String uri, String localName, String qName) throws SAXException {
-
-        if (qName.equalsIgnoreCase("name")) {
-            currentProduct.setName(currentValue.toString().trim());
-        } else if (qName.equalsIgnoreCase("wholesalerPrice")) {
-            double price = Double.parseDouble(currentValue.toString().trim());
-            currentProduct.setWholesalerPrice(new Amount(price));
-            currentProduct.setPublicPrice(new Amount(price * 2));  // Precio público es el doble del precio mayorista
-        } else if (qName.equalsIgnoreCase("stock")) {
-            int stock = Integer.parseInt(currentValue.toString().trim());
-            currentProduct.setStock(stock); // Usar setStock directamente
-        } else if (qName.equalsIgnoreCase("product")) {
-            productList.add(currentProduct);  // Al terminar el producto, lo añadimos a la lista
+        // Cada vez que empieza un elemento, reiniciamos el buffer
+        value = "";
+        parsedElement = qName;
+        
+        if ("product".equals(qName)) {
+            // creas tu Product con atributos, etc.
+            product = new Product(
+                attributes.getValue("name"),
+                new Amount(0),
+                true,
+                0
+            );
         }
     }
 
-    // Para capturar los valores dentro de las etiquetas
     @Override
     public void characters(char[] ch, int start, int length) throws SAXException {
-        currentValue.append(new String(ch, start, length));
+        // Acumulamos todo el texto (sin procesarlo aún)
+        value += new String(ch, start, length);
     }
 
-    // Método que devuelve la lista de productos una vez terminado el parseo
-    public ArrayList<Product> getProductList() {
-        return productList;
+    @Override
+    public void endElement(String uri, String localName, String qName) throws SAXException {
+        String text = value.trim();       // eliminamos espacios y saltos
+        if (!text.isEmpty()) {
+            switch (qName) {
+                case "wholesalePrice":    // coincidir con tu XML real
+                    double precio = Double.parseDouble(text);
+                    // si alguna vez amplías Amount para guardar currency, lo recogerás aquí
+                    product.setWholesalerPrice(new Amount(precio));
+                    break;
+                case "stock":
+                    int stock = Integer.parseInt(text);
+                    product.setStock(stock);
+                    break;
+                // otros campos si tuvieras más...
+            }
+        }
+
+        if ("product".equals(qName)) {
+            // cuando se cierra <product> añadimos al inventario
+            inventory.add(product);
+        }
+
+        // limpiamos para el siguiente elemento
+        parsedElement = "";
+        value = "";
     }
+
+    @Override
+    public void endDocument() throws SAXException {
+        printDocument();
+    }
+
+    private void printDocument() {
+        for (Product p : inventory) {
+            System.out.println(p.toString());
+        }
+    }
+
 }
-

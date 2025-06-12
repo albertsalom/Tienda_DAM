@@ -1,52 +1,40 @@
 package model;
 
-import javax.persistence.Embeddable;
-import javax.persistence.Transient;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import java.io.Serializable;
 import java.text.DecimalFormat;
 
-@XmlRootElement(name = "amount")
-@Embeddable
-public class Amount implements Serializable {
+import jakarta.xml.bind.annotation.XmlAttribute;
+import jakarta.xml.bind.annotation.XmlValue;
 
-    private static final long serialVersionUID = 1L;
-    
-    @Transient 
-    private double value;
+public class Amount {
+	private double value;	
+	private String currency="€";
+	
+	private static final DecimalFormat df = new DecimalFormat("0.00");
+	
+	public Amount () {
+		currency = "€";
+	};
+	public Amount(double value) {
+		super();
+		this.value = value;
+	}
 
-    @Transient 
-    private String currency = "€";
+	@XmlValue
+	public double getValue() {
+		return value;
+	}
 
-    private static final DecimalFormat df = new DecimalFormat("0.00");
+	public void setValue(double value) {
+		this.value = value;
+	}
 
-    public Amount() {}
+	@XmlAttribute(name="currency")
+	public String getCurrency() {
+		return currency;
+	}
 
-    public Amount(double value) {
-        this.value = value;
-    }
-
-    @XmlElement
-    public double getValue() {
-        return value;
-    }
-
-    public void setValue(double value) {
-        this.value = value;
-    }
-
-    @XmlElement
-    public String getCurrency() {
-        return currency;
-    }
-
-    public void setCurrency(String currency) {
-        this.currency = currency;
-    }
-
-    @Override
-    public String toString() {
-        return df.format(value) + currency;
-    }
+	@Override
+	public String toString() {
+		return df.format(value) + currency;
+	}	
 }

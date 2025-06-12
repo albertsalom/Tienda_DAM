@@ -1,7 +1,8 @@
 package model;
 
+import dao.Dao;
+import dao.DaoImplJDBC;
 import main.Logable;
-import dao.*;
 
 public class Employee extends Person implements Logable{
 	private int employeeId;
@@ -9,8 +10,8 @@ public class Employee extends Person implements Logable{
 	// connection using JDBC SQL
 	private Dao dao = new DaoImplJDBC();
 	
-	public static int USER = 123;
-	public static String PASSWORD = "test";
+//	public static final int USER = 123;
+//	public static final String PASSWORD = "test";
 	
 	public Employee(String name) {
 		super(name);
@@ -18,39 +19,41 @@ public class Employee extends Person implements Logable{
 	
 	public Employee(int employeeId, String name, String password) {
 		super(name);
-		this.USER = employeeId;
-		this.PASSWORD = password;
+		this.employeeId = employeeId;
+		this.password = password;
 	}
 	
 	public Employee() {
 		super();
 	}
 	
-	public Dao getDao() {
-		return dao;
+	/**
+	 * @return the employeeId
+	 */
+	public int getEmployeeId() {
+		return employeeId;
 	}
 
-	public void setDao(Dao dao) {
-		this.dao = dao;
+	/**
+	 * @param employeeId the employeeId to set
+	 */
+	public void setEmployeeId(int employeeId) {
+		this.employeeId = employeeId;
 	}
 
-	public static int getUSER() {
-		return USER;
+	/**
+	 * @return the password
+	 */
+	public String getPassword() {
+		return password;
 	}
 
-	public static void setUSER(int uSER) {
-		USER = uSER;
+	/**
+	 * @param password the password to set
+	 */
+	public void setPassword(String password) {
+		this.password = password;
 	}
-
-	public static String getPASSWORD() {
-		return PASSWORD;
-	}
-
-	public static void setPASSWORD(String pASSWORD) {
-		PASSWORD = pASSWORD;
-	}
-
-	
 
 	/**
 	 * @param user from application, password from application
@@ -58,9 +61,9 @@ public class Employee extends Person implements Logable{
 	 */
 	@Override
 	public boolean login(int user, String password) {
-		if (USER == user && PASSWORD.equals(password)) {
-			return true;
-		} 
+//		if (USER == user && PASSWORD.equals(password)) {
+//			return true;
+//		} 
 		boolean success = false;
 		
 		// connect to data

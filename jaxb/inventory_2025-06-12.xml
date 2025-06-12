@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<products total="2">
+    <product available="false" stock="0" id="1" name="Manzana">
+        <price>0.0</price>
+    </product>
+    <product available="false" stock="0" id="2" name="Fresa">
+        <price>0.0</price>
+    </product>
+</products>

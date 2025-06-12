@@ -1,215 +1,148 @@
 package dao;
 
-import model.Product;
-import dao.xml.*;
-import model.Amount;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Comparator;
 
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
-
-import main.Shop;  
-import org.xml.sax.SAXException;
+import model.Amount;
+import model.Employee;
+import model.Product;
 
 public class DaoImplFile implements Dao {
-    
-    private Shop shop; 
-
-    private static final String INVENTORY_FILE = "files/inputInventory.txt";  
-    private static final String INVENTORY_XML_FILE = "files/inputInventory.xml";
 
     @Override
-    public ArrayList<Product> getInventory() {
-        ArrayList<Product> inventory = new ArrayList<>();
+    public void connect() {
+        // TODO Auto-generated method stub
+    }
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(INVENTORY_FILE))) {
-            String line;
+    @Override
+    public void disconnect() {
+        // TODO Auto-generated method stub
+    }
+    
+    @Override
+    public Employee getEmployee(int employeeId, String password){
+        return null;
+    }
 
-            while ((line = reader.readLine()) != null) {
-                // Procesar cada línea y extraer datos del producto
-                String[] productDetails = line.split(";");
+    @Override
+	public ArrayList<Product> getInventory(){
 
-                // Crear variables auxiliares
-                String productName = null;
-                double wholesalePrice = 0;
-                int stock = 0;
+        ArrayList<Product> inventory = new ArrayList<Product>();
 
-                // Iterar por los detalles del producto
-                for (String detail : productDetails) {
-                    String[] keyValue = detail.split(":");
-                    if (keyValue.length != 2) {
-                        continue;
-                    }
-
-                    String key = keyValue[0].trim();
-                    String value = keyValue[1].trim();
-
-                    if (key.equals("Product")) {
-                        productName = value;
-                    } else if (key.equals("Wholesaler Price")) {
-                        try {
-                            wholesalePrice = Double.parseDouble(value);
-                        } catch (NumberFormatException e) {
-                            System.out.println("Error al convertir el precio a número: " + value);
-                        }
-                    } else if (key.equals("Stock")) {
-                        try {
-                            stock = Integer.parseInt(value);
-                        } catch (NumberFormatException e) {
-                            System.out.println("Error al convertir el stock a número: " + value);
-                        }
-                    }
-                }
-
-                // Verificar que se haya leído correctamente el producto antes de agregarlo al inventario
-                if (productName != null && wholesalePrice > 0 && stock >= 0) {
-                    // Crear el objeto Amount para el precio mayorista
-                    Amount wholesalerPriceAmount = new Amount(wholesalePrice);
-                    // Instanciar el producto con el constructor adecuado
-                    Product product = new Product(productName, wholesalerPriceAmount, true, stock);
-                    inventory.add(product);
-                } else {
-                    System.out.println("Datos incompletos o incorrectos para el producto: " + line);
-                }
-            }
-
-        } catch (IOException e) {
-            System.out.println("Error al leer el inventario desde el archivo: " + e.getMessage());
-        }
+        File f = new File(System.getProperty("user.dir") + File.separator + "files/inputInventory.txt");
+		
+		try {			
+			// wrap in proper classes
+			FileReader fr;
+			fr = new FileReader(f);				
+			BufferedReader br = new BufferedReader(fr);
+			
+			// read first line
+			String line = br.readLine();
+			
+			// process and read next line until end of file
+			while (line != null) {
+				// split in sections
+				String[] sections = line.split(";");
+				
+				String name = "";
+				double wholesalerPrice=0.0;
+				int stock = 0;
+				
+				// read each sections
+				for (int i = 0; i < sections.length; i++) {
+					// split data in key(0) and value(1) 
+					String[] data = sections[i].split(":");
+					
+					switch (i) {
+					case 0:
+						// format product name
+						name = data[1];
+						break;
+						
+					case 1:
+						// format price
+						wholesalerPrice = Double.parseDouble(data[1]);
+						break;
+						
+					case 2:
+						// format stock
+						stock = Integer.parseInt(data[1]);
+						break;
+						
+					default:
+						break;
+					}
+				}
+				// add product to inventory
+				inventory.add(new Product(name, new Amount(wholesalerPrice), true, stock));
+				
+				// read next line
+				line = br.readLine();
+			}
+			fr.close();
+			br.close();
+			
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
         return inventory;
     }
 
     @Override
-    public boolean writeInventory(ArrayList<Product> inventory) {
-        // Define el nombre del archivo en función de la fecha actual
-        LocalDate currentDate = LocalDate.now();
-        String fileName = "inventory_" + currentDate.toString() + ".txt";
-
-        // Localiza la ruta del archivo y el nombre
-        File file = new File(System.getProperty("user.dir") + File.separator + "files" + File.separator + fileName);
-
-        try {
-            // Envolver en clases adecuadas para la escritura
-            FileWriter fw = new FileWriter(file, true);
-            PrintWriter pw = new PrintWriter(fw);
-
-            // Contador de productos
-            int counterProduct = 1;
-
-            // Escribir línea por línea el inventario
-            for (Product product : inventory) {
-                // Primera línea: ContadorProducto;Nombre=Manzana;Wholesaler Price=10.00€;Stock=20;
-                StringBuilder productLine = new StringBuilder(counterProduct + ";");
-                productLine.append("Product=" + product.getName() + ";");
-                productLine.append("Wholesaler Price=" + product.getWholesalerPrice() + ";");
-                productLine.append("Stock=" + product.getStock() + ";");
-
-                // Escribir la línea del producto
-                pw.write(productLine.toString());
-                pw.write("\n");
-
-                // Incrementar el contador de productos
-                counterProduct++;
-            }
-
-            // Cerrar archivos
-            pw.close();
-            fw.close();
-
-            return true; // Indica que el inventario fue escrito correctamente
-        } catch (IOException e) {
-            System.out.println("Error al escribir el inventario: " + e.getMessage());
-            return false; // Indica que hubo un error al escribir el inventario
-        }
-    }
-    
-    public boolean writeInventoryXML(ArrayList<Product> inventory) {
-        ArrayList<Product> products = null;
-
-        // Leer el documento XML existente
-        SAXParserFactory factory = SAXParserFactory.newInstance();
-        SAXParser parser;
-        try {
-            parser = factory.newSAXParser();
-            File inputFile = new File("files/inputInventory.xml"); // Ruta corregida
-
-            // Verificar si el archivo existe
-            if (!inputFile.exists()) {
-                System.out.println("ERROR: Archivo 'inputInventory.xml' no encontrado en la ruta especificada.");
-                return false;
-            }
-
-            SaxReader saxReader = new SaxReader();
-            parser.parse(inputFile, saxReader);
-            products = saxReader.getProductList();
-            
-        } catch (ParserConfigurationException | SAXException e) {
-            System.out.println("ERROR creating the parser");
-            e.printStackTrace();
-        } catch (IOException e) {
-            System.out.println("ERROR: Archivo 'inputInventory.xml' no se pudo leer.");
-            e.printStackTrace();
-        }
-
-        // Crear un nuevo documento XML ordenado por stock en orden descendente
-        if (products != null) {
-            products.sort(Comparator.comparingInt(Product::getStock).reversed());
-            DomWriter domWriter = new DomWriter();
-
-            // Crear el directorio de salida si no existe
-            File outputDir = new File("files");
-            if (!outputDir.exists()) {
-                outputDir.mkdirs();
-            }
-
-            domWriter.generateDocument(products);
-            return true; // Indicar que el XML se generó correctamente
-        } else {
-            System.out.println("ERROR: La lista de productos está vacía o hubo un problema al procesar el XML de entrada.");
-            return false; // Indicar que hubo un problema al leer o procesar el XML
-        }
-    }
-
-
-    @Override
-    public void connect() {      
-    }
-
-    @Override
-    public void disconnect() {       
-    }
-
-    @Override
-    public model.Employee getEmployee(int employeeId, String password) {
-        return null;
-    }
-
-	@Override
-	public boolean addProduct(Product product) {
-		// TODO Auto-generated method stub
-		return false;
+	public boolean writeInventory(ArrayList<Product> inventory){
+        LocalDate fecha = LocalDate.now();
+		String rutaCarpeta = System.getProperty("user.dir") + File.separator + "files";
+		String rutaArchivo = rutaCarpeta + File.separator + "inventory_" + fecha.toString() + ".txt";
+		LocalDateTime fechaHora = LocalDateTime.now();
+		DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/mm/yyyy hh:mm:ss");
+        String fechaFormateada = fechaHora.format(formato);
+		System.out.println(rutaArchivo);
+		File file = new File(rutaArchivo);
+		FileWriter fw;
+		try {
+			fw = new FileWriter(file);
+			PrintWriter pw = new PrintWriter(fw);
+			int numeroTotalProductos = 0;
+			for (Product product : inventory) {
+				if (product != null) {
+					pw.write(product.getId() + ";Product=" + product.getName() + ";Stock=" + product.getStock() + "\n");
+					numeroTotalProductos++;
+				}
+			}
+			pw.write("Numero total de productos: " + numeroTotalProductos);
+            pw.write("Informe generado a dia: " + fechaFormateada);
+			pw.close();
+			return true;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return false;
+		}
 	}
 
-	@Override
-	public boolean updateProduct(Product product) {
+	public void addProduct(Product product){
 		// TODO Auto-generated method stub
-		return false;
 	}
-
-	@Override
-	public boolean deleteProduct(int productId) {
+	public void updateProduct(String name, int stock){
 		// TODO Auto-generated method stub
-		return false;
+	}
+	public void deleteProduct(String name){
+		// TODO Auto-generated method stub
 	}
 }
-
